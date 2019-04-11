@@ -1,0 +1,8 @@
+---
+
+nginx_deps:
+nginx_package:
+  - nginx
+nginx_deps_needed: False
+
+

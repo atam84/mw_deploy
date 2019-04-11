@@ -1,0 +1,88 @@
+---
+- name: '[0_0] - Setting postgres database'
+  hosts: database
+  remote_user: ansible-adm
+  become: yes
+  gather_facts: yes
+  vars_files:
+    - vars/main.yml
+    - vars/database_settings.yml
+  tasks:
+    #
+    #
+    - name: Install postgreSQL dependencies packages
+      apt:
+         name: "{{ db_dependencies }}"
+         update_cache: yes
+         state: latest
+      tags: package-dep
+      when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+    #
+    #
+    - name: Install postgreSQL packages
+      apt:
+         name: "{{ db_packages }}"
+         update_cache: yes
+         state: present
+      tags: install-postgres
+      when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+    #
+    #
+    - name: Install postgreSQL dependencies packages
+      yum:
+         name: "{{ db_dependencies }}"
+         update_cache: yes
+         state: latest
+      tags: package-dep
+      when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+
+    #
+    #
+    - name: Install postgreSQL packages
+      yum:
+         name: "{{ db_packages }}"
+         update_cache: yes
+         state: present
+      tags: install-postgres
+      when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+
+    #
+    #
+    - name: Start the databese service
+      service:
+         name: postgresql
+         state: started
+         enabled: yes
+      tags: db-startservice
+
+    #
+    #
+    - name: Create postgreSQL database
+      become_user: postgres
+      postgresql_db:
+         name: "{{ db_name }}"
+         port: "{{ db_port }}"
+         ssl_mode: prefer
+         state: present
+      tags: createdb
+
+    #
+    #
+    - name: Create database user
+      become_user: postgres
+      postgresql_user:
+         db: "{{ db_name }}"
+         name: "{{ db_username }}"
+         password: "{{ db_password }}"
+         expires: "{{ db_user_expire }}"
+         role_attr_flags: "{{ db_role_attr }}"
+         state: present
+      tags: db-createuser
+
+# you can add tasks like this
+#    - import_tasks: tasks/common/get_hostname.yml
+
+
+

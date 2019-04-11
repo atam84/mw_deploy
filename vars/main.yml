@@ -1,0 +1,3 @@
+---
+check_hostname: True
+set_new_prompt: False

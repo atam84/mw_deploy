@@ -1,0 +1,27 @@
+---
+- name: '[0_0] - Create services'
+  hosts: micro-services
+  remote_user: ansible-adm
+  become: yes
+  gather_facts: yes
+  vars_files:
+    - ../../vars/services_settings.yml
+  vars:
+    - service: "{{ services[hostvars[inventory_hostname]['service']] }}"
+  tasks:
+    - name: Create service "{{ service.name }}"
+      template:
+         src: ../../templates/service-config.j2
+         dest: "/var/tmp/{{ service.name }}.service"
+      #with_items: "{{ x.split('arn:') }}"
+    - name: Created service
+      debug:
+         msg: "{{ service }}"
+         #msg: "{{ services[hostvars[inventory_hostname]['service']]['state'] }}"
+
+
+# you can add tasks like this
+#    - import_tasks: tasks/common/get_hostname.yml
+
+
+

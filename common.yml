@@ -1,0 +1,18 @@
+---
+- name: '[0_0] - Play common actions'
+  hosts: all
+  remote_user: ansible-adm
+  become: yes
+  gather_facts: yes
+  vars_files:
+    - vars/main.yml
+  tasks:
+    - name: set custom prompt
+      copy:
+        content: 'export PS1="\n[\e[1;97mPath: \e[92m\w\e[0m]\n[\e[1;93m\h\e[0m] ~ \e[96m\u\e[0m \e[1;91m-> \e[0m"'
+        dest: /etc/profile.d/99-prompt.sh
+      when: set_new_prompt
+
+# you can add tasks like this
+#    - import_tasks: tasks/common/get_hostname.yml
+#

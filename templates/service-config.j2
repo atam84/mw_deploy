@@ -1,0 +1,82 @@
+[Unit]
+{% if service.Description is defined %}
+Description={{ service.Unit.Description }}
+{% else %}
+Description=Service {{ service.name }}
+{% endif %}
+{% if service.Documentation is defined %}
+Documentation={{ service.Unit.Documentation }}
+{% endif %}
+{% if service.Unit.Before is defined %}
+Before={{ service.Unit.Before }}
+{% endif %}
+{% if service.Unit.After is defined %}
+After={{ service.Unit.After }}
+{% endif %}
+{% if service.Unit.Requires is defined %}
+Requires={{ service.Unit.Requires }}
+{% endif %}
+{% if service.Unit.Want is defined %}
+Want={{ service.Unit.Want }}
+{% endif %}
+{% if service.Unit.Conflicts is defined %}
+Conflicts={{ service.Unit.Conflicts }}
+{% endif %}
+
+
+[Install]
+{% if service.Install.Alias is defined %}
+Alias={{ service.Install.Alias }}
+{% endif %}
+{% if service.Install.RequiredBy is defined %}
+RequiredBy={{ service.Install.RequiredBy }}
+{% endif %}
+{% if service.Install.WantedBy is defined %}
+WantedBy={{ service.Install.WantedBy }}
+{% else %}
+WantedBy=multi-user.target
+{% endif %}
+{% if service.Install.Also is defined %}
+Also={{ service.Install.Also }}
+{% endif %}
+
+
+[Service]
+{% if service.Service.Type is defined %}
+Type={{ service.Service.Type }}
+{% else %}
+Type=Simple
+{% endif %}
+ExecStart={{ service.Service.ExecStart }}
+{% if service.Service.ExecStop is defined %}
+ExecStop={{ service.Service.ExecStop }}
+{% else %}
+ExecStop=/bin/kill -KILL ${MAINPID}
+{% endif %}
+{% if service.Service.ExecReload is defined %}
+ExecReload={{ service.Service.ExecReload }}
+{% else %}
+ExecReload=/bin/kill -HUP ${MAINPID}
+{% endif %}
+{% if service.Service.User is defined %}
+User={{ service.Service.User }}
+{% endif %}
+{% if service.Service.Group is defined %}
+Group={{ service.Service.Group }}
+{% endif %}
+{% if service.Service.Restart is defined %}
+Restart={{ service.Service.Restart }}
+{% else %}
+Restart=on-failure
+{% endif %}
+{% if service.Service.KillMode is defined %}
+KillMode={{ service.Service.KillMode }}
+{% else %}
+KillMode=process
+{% endif %}
+{% if service.Service.RemainAfterExit is defined %}
+RemainAfterExit={{ service.Service.RemainAfterExit }}
+{% else %}
+RemainAfterExit=False
+{% endif %}
+

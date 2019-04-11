@@ -1,0 +1,7 @@
+---
+- name: get hostname
+  shell: "hostname"
+  register: hostname_info
+
+- debug:
+    msg: "there is the hostname information: {{ hostname_info }}"

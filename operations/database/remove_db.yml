@@ -1,0 +1,60 @@
+---
+- name: '[0_0] - Remove postgreSQL from db servers'
+  hosts: database
+  remote_user: ansible-adm
+  become: yes
+  gather_facts: yes
+  vars_files:
+    - ../../vars/main.yml
+    - ../../vars/database_settings.yml
+  tasks:
+    - name: Dump the database before removing it
+      become_user: postgres
+      postgresql_db:
+         name: "{{ db_name }}"
+         state: dump
+         target: "{{ db_dump_path }}db_dump.sql.gz"
+      when: on_db_remove_perform_dump
+
+    - name: Stop the databese service
+      service:
+         name: postgresql
+         state: stopped
+         enabled: no
+      tags: stop-db-startservice
+
+    - name: Uninstall postgreSQL packages
+      apt:
+         name: "{{ db_packages }}"
+         purge: "{{ on_db_remove_purge_package }}"
+         autoremove: yes
+         state: absent
+      tags: rm-install-postgres
+      when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+    - name: Uninstall database postgreSQL dependencies packages
+      apt:
+         name: "{{ db_dependencies }}"
+         state: absent
+      tags: rm-package-dep
+      when: on_db_remove_purge_deps and ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+
+    - name: Uninstall postgreSQL packages
+      yum:
+         name: "{{ db_packages }}"
+         autoremove: yes
+         state: absent
+      tags: rm-install-postgres
+      when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+
+    - name: Uninstall database postgreSQL dependencies packages
+      yum:
+         name: "{{ db_dependencies }}"
+         state: absent
+      tags: rm-package-dep
+      when: on_db_remove_purge_deps and ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+
+
+# you can add tasks like this
+#    - import_tasks: tasks/common/get_hostname.yml
