@@ -1,0 +1,26 @@
+---
+openldap_server_user: ldap
+
+openldap_server_rootpw: R00tP@ssW0rd
+
+openldap_rhel_path: /etc/openldap/
+
+openldap_deb_path: /etc/openldap/
+
+openldap_password: md5hashPassword
+
+openldap_deb_packages:
+  - slapd
+  - ldap-utils
+  - python-selinux
+  - openssl
+
+openldap_rpm_packages:
+  - openldap
+  - compat-openldap
+  - openldap-clients
+  - openldap-servers
+  - openldap-servers-sql
+  - openldap-devel
+  - libselinux-python
+  - openssl

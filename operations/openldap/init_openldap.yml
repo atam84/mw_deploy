@@ -1,0 +1,51 @@
+---
+
+- name: '[0_0] - Initialization of OpenLDAP'
+  hosts: openldap
+  remote_user: ansible-adm
+  become: yes
+  gather_facts: no
+  vars_files:
+    - ../../vars/openldap_settings.yml
+  tasks:
+    #
+    #
+    - name: (deb) Install openldap packages
+      apt:
+         name: "{{ openldap_deb_packages }}"
+         state: present
+      when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+    #
+    #
+    - name: (rpm) Install openldap packages
+      yum:
+         name: "{{ openldap_rpm_packages }}"
+         state: present
+      when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+
+    #
+    #
+    - name: Generate the root password for ldap
+      shell: slappasswd -s "{{ openldap_server_rootpw }}"
+      register: root_password
+      no_log: true
+
+    - debug:
+         msg: "OpenLDAP = {{ root_password }}"
+
+    #
+    #
+    - name: Reload systemd configuration
+      systemd:
+         daemon_reload: yes
+
+    #
+    #
+    - name: Starting/Restart openLDAP service
+      service:
+         name: slapd
+         state: restarted
+         enabled: yes
+      register: servicestatus
+

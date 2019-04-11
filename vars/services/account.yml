@@ -1,0 +1,33 @@
+---
+name: account
+state: started
+enabled: yes
+packages_deb:
+ - java-common
+ - openjdk-8-jre
+packages_rpm:
+ - java-common
+ - openjdk-8-jre
+artifactoryArchiveName: 7z920.tar.bz2
+binaryName: my-app.jar
+url: https://www.7-zip.org/a/7z920.tar.bz2
+dest: /var/tmp/account
+timeout: 30
+mode: 0644
+owner: root
+group: root
+Unit:
+   Description: Service account
+   Documentation: __SERVICE_DOCUMENTATION_DOCUMENT_OR_URL__
+   After: network
+   Requires: network
+Install:
+   WantedBy: multi-user.target
+Service:
+   Type: Simple
+   ExecStart: /usr/bin/java -Dspring.profiles.active={{ global_profile }} -Dspring.cloud.config.uri={{ global_config_server_url }} -jar /var/tmp/account/my-app.jar
+   User: mobiwan
+   Group: mobiwan
+   ExecStop: /bin/kill -KILL ${MAINPID}
+   ExecReload: /bin/kill -HUP ${MAINPID}
+   RemainAfterExit: False

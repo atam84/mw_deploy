@@ -1,0 +1,32 @@
+---
+name: mobiwan-user
+state: started
+enabled: yes
+packages_deb:
+ - java-common
+ - openjdk-8-jre
+packages_rpm:
+ - java-common
+ - openjdk-8-jre
+artifactoryArchiveName: 7z920.tar.bz2
+url: https://www.7-zip.org/a/7z920.tar.bz2
+dest: /var/tmp/mobiwan-user
+timeout: 30
+mode: 0644
+owner: root
+group: root
+Unit:
+   Description: Service mobiwan-user
+   Documentation: __SERVICE_DOCUMENTATION_DOCUMENT_OR_URL__
+   After: network
+   Requires: network
+Install:
+   Alias: __ALIAS_SERVICE_NAME__
+Service:
+   Type: Simple
+   ExecStart: __HOW_THE_BINARY_WILL_EXEC__
+   User: mobiwan
+   Group: mobiwan
+   ExecStop: /bin/kill -KILL ${MAINPID}
+   ExecReload: /bin/kill -HUP ${MAINPID}
+   RemainAfterExit: False

@@ -4,6 +4,8 @@ enable_debug_mode: False
 
 artifactories_are_not_in_local: True
 
+services_path: /var/tmp
+
 download_root_path: /tmp
 
 cleanup_download_when_finish: True
@@ -92,6 +94,8 @@ services:
          ExecStart: my-starter-here
          ExecStop: /bin/kill -KILL ${MAINPID}
          ExecReload: /bin/kill -HUP ${MAINPID}
+         User: mobi
+         Group: mobi
          Restart: on-failure
          KillMode: process
          RemainAfterExit: False
@@ -121,7 +125,9 @@ services:
          Alias: verif-service
       Service:
          Type: Simple
-         ExecStart: my-starter-here
+         ExecStart: m1y-starter-here
+         User: alex
+         Group: alex
          ExecStop: /bin/kill -KILL ${MAINPID}
          ExecReload: /bin/kill -HUP ${MAINPID}
          RemainAfterExit: False

@@ -3,10 +3,10 @@
   hosts: database
   remote_user: ansible-adm
   become: yes
-  gather_facts: yes
+  gather_facts: no
   vars_files:
-    - vars/main.yml
-    - vars/database_settings.yml
+    - ../../vars/main.yml
+    - ../../vars/database_settings.yml
   tasks:
     #
     #

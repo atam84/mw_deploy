@@ -1,3 +1,5 @@
 ---
 check_hostname: True
 set_new_prompt: False
+global_profile: dev
+global_config_server_url: http://config-server.local.net:8088/

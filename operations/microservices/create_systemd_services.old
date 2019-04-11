@@ -4,31 +4,15 @@
   hosts: micro-services
   remote_user: ansible-adm
   become: yes
-  gather_facts: yes
+  gather_facts: no
   vars_files:
-    - ../../vars/main.yml
     - ../../vars/services_settings.yml
   tasks:
     #
     #
-    - name: Loading services definition
-      include_vars: 
-         file: "../../vars/services/{{ item }}.yml"
-         name: "{{ item }}"
-      with_items: "{{ hostvars[inventory_hostname]['service'].split(',') }}"
-
-#    - debug:
-#         msg: "{{ operation }}"
-#
-#    - vars:
-#        - op: "{{ lookup('vars', item) }}"
-#      debug:
-#         msg: "{{ op }}"
-#      with_items: "{{ hostvars[inventory_hostname]['service'].split(',') }}"
-
     - name: (deb) Install prerequestes packages
       vars:
-        - service: "{{ lookup('vars', item) }}"
+        - service: "{{ services[item] }}"
       apt:
          name: "{{ service.packages_deb }}"
          state: present
@@ -40,7 +24,7 @@
     #
     - name: (rpm) Install prerequestes packages
       vars:
-         service: "{{ lookup('vars', item) }}"
+        - service: "{{ services[item] }}"
       yum:
          name: "{{ service.packages_rpm }}"
          state: present
@@ -52,7 +36,7 @@
     #
     - name: Create directories destination for download if doesn't exist
       vars:
-         service: "{{ lookup('vars', item) }}"
+        - service: "{{ services[item] }}"
       file:
          path: "{{ download_root_path }}/{{ service.name }}"
          state: directory
@@ -65,7 +49,7 @@
     #
     - name: Create directories destination to extract the archives if doesn't exist
       vars:
-         service: "{{ lookup('vars', item) }}"
+        - service: "{{ services[item] }}"
       file:
          path: "{{ service.dest }}"
          state: directory
@@ -77,9 +61,9 @@
     #
     - name: Transfert file and unarchive from Ansible machine
       vars:
-         service: "{{ lookup('vars', item) }}"
+        - service: "{{ services[item] }}"
       unarchive:
-         url: "{{ service.url }}"
+         url: "{{ service.src }}"
          dest: "{{ service.dest }}"
          remote_src: yes
       with_items: "{{ hostvars[inventory_hostname]['service'].split(',') }}"
@@ -96,7 +80,7 @@
     #
     - name: Download artifactories
       vars:
-         service: "{{ lookup('vars', item) }}"
+        - service: "{{ services[item] }}"
       get_url:
          url: "{{ service.url }}"
          dest: "{{ download_root_path }}/{{ service.name }}/{{ service.artifactoryArchiveName }}"
@@ -104,9 +88,9 @@
          mode: "{{ service.mode }}"
          owner: "{{ service.owner }}"
          group: "{{ service.group }}"
-         #url_username: "{{ url_username }}"
-         #url_password: "{{ url_password }}"
-         #use_proxy: "{{ user_proxy|no }}"
+         #url_username: "{{ service.url_username }}"
+         #url_password: "{{ service.url_password }}"
+         #use_proxy: "{{ service.user_proxy|no }}"
       register: downloadstatus
       with_items: "{{ hostvars[inventory_hostname]['service'].split(',') }}"
       when: artifactories_are_not_in_local
@@ -115,7 +99,7 @@
     #
     - name: Unarchive downloaded files
       vars:
-         service: "{{ lookup('vars', item) }}"
+        - service: "{{ services[item] }}"
       unarchive:
          src: "{{ download_root_path }}/{{ service.name }}/{{ service.artifactoryArchiveName }}"
          dest: "{{ service.dest }}"
@@ -134,10 +118,10 @@
     #
     - name: Create service "{{ hostvars[inventory_hostname]['service'].split(',') }}"
       vars:
-         service: "{{ lookup('vars', item) }}"
+        - service: "{{ services[item] }}"
       template:
          src: ../../templates/service-config.j2
-         dest: "{{ services_path }}/{{ service.name }}.service"
+         dest: "/var/tmp/{{ service.name }}.service"
       register: srvcreatestatus
       with_items: "{{ hostvars[inventory_hostname]['service'].split(',') }}"
 
@@ -158,7 +142,7 @@
     #
     - name: Starting services
       vars:
-         service: "{{ lookup('vars', item) }}"
+       - service: "{{ services[item] }}"
       service:
          name: "{{ service.name }}"
          state: "{{ service.state }}"
