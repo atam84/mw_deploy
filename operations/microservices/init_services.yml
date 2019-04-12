@@ -9,24 +9,15 @@
     - ../../vars/main.yml
     - ../../vars/services_settings.yml
   tasks:
-    #
-    #
-    - name: Loading services definition
+    # load all services definition from ../../vars/services/<service_name>.yml
+    - name: Loading all services definition
       include_vars: 
          file: "../../vars/services/{{ item }}.yml"
          name: "{{ item }}"
       with_items: "{{ hostvars[inventory_hostname]['service'].split(',') }}"
 
-#    - debug:
-#         msg: "{{ operation }}"
-#
-#    - vars:
-#        - op: "{{ lookup('vars', item) }}"
-#      debug:
-#         msg: "{{ op }}"
-#      with_items: "{{ hostvars[inventory_hostname]['service'].split(',') }}"
-
-    - name: (deb) Install prerequestes packages
+    # When the base OS is Debian
+    - name: (deb) Install prerequestes packages foreach service
       vars:
         - service: "{{ lookup('vars', item) }}"
       apt:
@@ -36,9 +27,8 @@
       with_items: "{{ hostvars[inventory_hostname]['service'].split(',') }}"
       when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
 
-    #
-    #
-    - name: (rpm) Install prerequestes packages
+    # When the base OS is Redhat
+    - name: (rpm) Install prerequestes packages foreach service
       vars:
          service: "{{ lookup('vars', item) }}"
       yum:
@@ -48,8 +38,7 @@
       with_items: "{{ hostvars[inventory_hostname]['service'].split(',') }}"
       when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
 
-    #
-    #
+    # Create directories for downloads
     - name: Create directories destination for download if doesn't exist
       vars:
          service: "{{ lookup('vars', item) }}"
@@ -61,9 +50,8 @@
       with_items: "{{ hostvars[inventory_hostname]['service'].split(',') }}"
       when: artifactories_are_not_in_local
 
-    #
-    #
-    - name: Create directories destination to extract the archives if doesn't exist
+    # Always fired te target directory is in the services definition
+    - name: Create target directories to extract the archives if needed
       vars:
          service: "{{ lookup('vars', item) }}"
       file:
@@ -73,27 +61,24 @@
       register: dirdeststatus
       with_items: "{{ hostvars[inventory_hostname]['service'].split(',') }}"
 
-    #
-    #
+    # When artifactories_are_not_in_local = False this mean here that we push the files target from the Ansible machine
+    # In the services definition section the path of target archive file is in service.url variable 
     - name: Transfert file and unarchive from Ansible machine
       vars:
          service: "{{ lookup('vars', item) }}"
-      unarchive:
-         url: "{{ service.url }}"
+      copy:
+         src: "{{ service.url }}"
          dest: "{{ service.dest }}"
-         remote_src: yes
       with_items: "{{ hostvars[inventory_hostname]['service'].split(',') }}"
       when: artifactories_are_not_in_local == False
 
-    #
-    #
+    # used for debug :)
     - name: Created download directories status
       debug:
          msg: "{{ dirdownloadstatus }}"
       when: enable_debug_mode
 
-    #
-    #
+    # 
     - name: Download artifactories
       vars:
          service: "{{ lookup('vars', item) }}"
@@ -111,27 +96,39 @@
       with_items: "{{ hostvars[inventory_hostname]['service'].split(',') }}"
       when: artifactories_are_not_in_local
 
-    #
-    #
-    - name: Unarchive downloaded files
+    # 
+    - name: Unarchive downloaded files if needed
       vars:
          service: "{{ lookup('vars', item) }}"
       unarchive:
          src: "{{ download_root_path }}/{{ service.name }}/{{ service.artifactoryArchiveName }}"
          dest: "{{ service.dest }}"
          remote_src: yes
+      ignore_errors: yes 
+      when: service.isArchive and service.extract
       with_items: "{{ hostvars[inventory_hostname]['service'].split(',') }}"
       when: artifactories_are_not_in_local
 
-    #
-    #
+    # 
+    - name: Unarchive local files if needed
+      vars:
+         service: "{{ lookup('vars', item) }}"
+      unarchive:
+         src: "{{ service.dest }}/{{ service.artifactoryArchiveName }}"
+         dest: "{{ service.dest }}"
+         remote_src: yes
+      ignore_errors: yes 
+      when: service.isArchive and service.extract
+      with_items: "{{ hostvars[inventory_hostname]['service'].split(',') }}"
+      when: artifactories_are_not_in_local == False
+
+    # 
     - name: Created services status
       debug:
          msg: "{{ downloadstatus }}"
       when: enable_debug_mode
 
-    #
-    #
+    # 
     - name: Create service "{{ hostvars[inventory_hostname]['service'].split(',') }}"
       vars:
          service: "{{ lookup('vars', item) }}"
@@ -141,21 +138,18 @@
       register: srvcreatestatus
       with_items: "{{ hostvars[inventory_hostname]['service'].split(',') }}"
 
-    #
-    #
+    # for debug :)
     - name: Created services status
       debug:
          msg: "{{ srvcreatestatus }}"
       when: enable_debug_mode
 
-    #
-    #
+    # this is systemctl daemon-reload
     - name: Reload systemd configuration
       systemd:
          daemon_reload: yes
 
-    #
-    #
+    # Put the services in needed state
     - name: Starting services
       vars:
          service: "{{ lookup('vars', item) }}"
@@ -166,8 +160,7 @@
       register: servicestatus
       with_items: "{{ hostvars[inventory_hostname]['service'].split(',') }}"
 
-    #
-    #
+    # for debug :)
     - name: Staring services status
       debug:
          msg: "{{ servicestatus }}"

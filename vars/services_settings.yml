@@ -1,134 +1,25 @@
 ---
 
+#
+# the services definition are stored in services/ in the same root dir as this file 
+#
+
+# If True the debug mode is enabled default value is False
 enable_debug_mode: False
 
-artifactories_are_not_in_local: True
+# This mean that all files of the deployment are not stored in the local machine (Ansible machine)
+artifactories_are_not_in_local: False
 
+# Path where we store the artificatories in the local machine (Ansible machine)
+# The path is relative to the init_services.yml position
+artifactories_local_path: ../../files/arch
+
+# The default path is /lib/systemd/system/ and here we store all services configurations files
 services_path: /var/tmp
 
+# Here we store the downloaded files
 download_root_path: /tmp
 
+# When True all downloaded files will be deleted after the playbook success
 cleanup_download_when_finish: True
-
-# Every service will have this structure like and will be defined as dict on services
-#    logging:
-#      name: logging
-#      state: stopped
-#      packages_deb:
-#       - java
-#       - node
-#      packages_rpm:
-#       - java
-#       - node
-#      enabled: no
-#      artifactoryArchiveName: 7z920.tar.bz2
-#      url: https://www.7-zip.org/a/7z920.tar.bz2
-#      dest: /var/tmp/7zip-app
-#      timeout: 30
-#      mode: 0644
-#      owner: ansible-adm
-#      group: ansible-adm
-#      Unit:
-#         Description: logging service
-#         Documentation: http://logging-doc.io
-#         Before:
-#         After: network
-#         Requires: network
-#         Want:
-#         Conflicts:
-#      Install:
-#         Alias: log-service
-#         RequiredBy:
-#         WantedBy: multi-user.target
-#         Also:
-#      Service:
-#         Type: Simple
-#         ExecStart: my-starter-here
-#         ExecStop: /bin/kill -KILL ${MAINPID}
-#         ExecReload: /bin/kill -HUP ${MAINPID}
-#         Restart: on-failure
-#         KillMode: process
-#         RemainAfterExit: False
-#
-#
-
-
-services:
-   monitoring:
-      name: monitoring
-      state: started
-      enabled: no
-      packages_deb:
-       - java-common
-       - openjdk-8-jre
-      packages_rpm:
-       - java-common
-       - openjdk-8-jre
-   logging:
-      name: logging
-      state: stopped
-      enabled: no
-      packages_deb:
-       - java-common
-       - openjdk-8-jre
-      packages_rpm:
-       - java-common
-       - openjdk-8-jre
-      artifactoryArchiveName: 7z920.tar.bz2
-      url: https://www.7-zip.org/a/7z920.tar.bz2
-      dest: /var/tmp/7zip-app
-      timeout: 30
-      mode: 0644
-      owner: ansible-adm
-      group: ansible-adm
-      Unit:
-         Description: logging service
-         Documentation: http://logging-doc.io
-         After: network
-         Requires: network
-      Install:
-         Alias: log-service
-         WantedBy: multi-user.target
-      Service:
-         Type: Simple
-         ExecStart: my-starter-here
-         ExecStop: /bin/kill -KILL ${MAINPID}
-         ExecReload: /bin/kill -HUP ${MAINPID}
-         User: mobi
-         Group: mobi
-         Restart: on-failure
-         KillMode: process
-         RemainAfterExit: False
-   verification:
-      name: verification
-      state: started
-      enabled: yes
-      packages_deb:
-       - java-common
-       - openjdk-8-jre
-      packages_rpm:
-       - java-common
-       - openjdk-8-jre
-      artifactoryArchiveName: 7z920.tar.bz2
-      url: https://www.7-zip.org/a/7z920.tar.bz2
-      dest: /var/tmp/7zip
-      timeout: 30
-      mode: 0644
-      owner: ansible-adm
-      group: ansible-adm
-      Unit:
-         Description: verification service
-         Documentation: http://verification-doc.io
-         After: network
-         Requires: network
-      Install:
-         Alias: verif-service
-      Service:
-         Type: Simple
-         ExecStart: m1y-starter-here
-         User: alex
-         Group: alex
-         ExecStop: /bin/kill -KILL ${MAINPID}
-         ExecReload: /bin/kill -HUP ${MAINPID}
-         RemainAfterExit: False
 

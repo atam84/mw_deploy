@@ -1,0 +1,37 @@
+[database]
+10.78.218.154 host_name=database domain_name=local.net service=monitoring
+
+[zuul]
+10.78.218.97 host_name=zuul-keycloack domain_name=local.net
+
+[keycloack]
+10.78.218.97
+
+[openldap]
+10.78.218.154
+
+[eureka]
+10.78.218.97
+
+[geoloc]
+10.78.218.111 host_name=geoloc-proxy service=account,ccp-user,customer,ged-document,mobiwan-user,otp,transaction,audit-piste,cmi-payment,exchange-rate,geoloc-gab,notification,recipient,user-management-gui,card,customer-product,favorite,operation,user-proxy
+
+[ccp-user]
+10.78.218.111
+
+[user-proxy]
+10.78.218.111
+
+[nginx-proxy:children]
+zuul
+[infrastructure:children]
+database
+micro-services
+zuul
+openldap
+eureka
+
+[micro-services:children]
+user-proxy
+ccp-user
+

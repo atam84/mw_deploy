@@ -8,8 +8,8 @@ packages_deb:
 packages_rpm:
  - java-common
  - openjdk-8-jre
-artifactoryArchiveName: 7z920.tar.bz2
-url: https://www.7-zip.org/a/7z920.tar.bz2
+artifactoryArchiveName: 7z920.jar
+url: /home/ansible-adm/test002/files/arch/package.jar
 dest: /var/tmp/card
 timeout: 30
 mode: 0644

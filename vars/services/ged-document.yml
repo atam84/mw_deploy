@@ -9,7 +9,7 @@ packages_rpm:
  - java-common
  - openjdk-8-jre
 artifactoryArchiveName: 7z920.tar.bz2
-url: https://www.7-zip.org/a/7z920.tar.bz2
+url: /home/ansible-adm/test002/files/arch/package.jar
 dest: /var/tmp/ged-document
 timeout: 30
 mode: 0644
