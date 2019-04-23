@@ -1,0 +1,16 @@
+[Unit]
+Description=Redis Slave
+After=network.target
+
+[Service]
+#Type=simple
+PIDFile={{ redis_root_working_dir }}/config/{{ redis_port_slave }}/redis.pid
+#User=redis
+#Group=redis
+#ExecStartPre=/bin/mkdir -p /var/log/redis/slave/{{ redis_port_slave }}
+ExecStart=/usr/local/bin/redis-server {{ redis_root_working_dir }}/config/{{ redis_port_slave }}/redis.conf
+ExecStop=/usr/local/bin/redis-cli shutdown
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

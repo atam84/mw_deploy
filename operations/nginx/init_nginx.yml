@@ -1,14 +1,15 @@
 ---
-- name: '[0_0] - Nginx servers initialization'
+- name: '[0_0] - Nginx servers installation and configuration'
   hosts: nginx-proxy
   remote_user: ansible-adm
   become: yes
-  gather_facts: no
+  gather_facts: yes
   vars_files:
     - ../../vars/main.yml
     - ../../vars/nginx_settings.yml
+    - ../../vars/keycloak_settings.yml
   tasks:
-    - name: Install nginx deps packages
+    - name: (deb) - Install nginx deps packages
       apt:
          name: "{{ nginx_deps }}"
          update_cache: yes
@@ -16,7 +17,7 @@
       tags: install-nginx-deps
       when: nginx_deps_needed and ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
 
-    - name: Install nginx
+    - name: (deb) - Install nginx
       apt:
          name: "{{ nginx_package }}"
          state: present
@@ -24,40 +25,69 @@
       when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
 
 
-    - name: Install nginx deps packages
+    - name: (rpm) - Install nginx deps packages
       yum:
          name: "{{ nginx_deps }}"
          update_cache: yes
          state: latest
       tags: install-nginx-deps
-      when: nginx_deps_needed and ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+      when: nginx_deps_needed and ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
 
-    - name: Install nginx
+    - name: (rpm) - Install nginx
       yum:
          name: "{{ nginx_package }}"
          state: present
       tags: install-nginx
-      when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+      when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
 
 
 
-    - name: Configure nginx
+    #
+    #
+    - name: Add upstream keycloak service to available sites configuration
       template:
-         src: ../../templates/nginx-config-file.j2
-         dest: /etc/nginx/nginx-configuration-file.conf
-      tags: configure-nginx
+         src: "{{ template_path }}/keycloak_upstream_server.j2"
+         dest: "/etc/nginx/sites-available/keycloak-upstream"
+      ignore_errors: yes
+      when: hostvars[inventory_hostname]['is-keycloak-upstream'] == True
 
-    - name: Configure nginx proxy server
-      template:
-         src: ../../templates/nginx-proxy-config-file.j2
-         dest: /etc/nginx/conf.d/nginx-proxy-configuration-file.conf
+    - name: Activate upstream keycloak service
+      file:
+         src: "/etc/nginx/sites-available/keycloak-upstream"
+         dest: "/etc/nginx/sites-enabled/keycloak-upstream"
+         state: link
+      ignore_errors: yes
+      when: hostvars[inventory_hostname]['is-keycloak-upstream'] == True
+
+    - name: Remove default enabled site
+      file:
+         path: "/etc/nginx/sites-enabled/default"
+         state: absent
+      ignore_errors: yes
+      when: hostvars[inventory_hostname]['is-keycloak-upstream'] == True
+      
+
+    - debug:
+         msg: "{{ groups['keycloak'] }}"
+
+#    - name: Configure nginx
+#      template:
+#         src: ../../templates/nginx-config-file.j2
+#         dest: /etc/nginx/nginx-configuration-file.conf
+#      tags: configure-nginx
+#
+#    - name: Configure nginx proxy server
+#      template:
+#         src: ../../templates/nginx-proxy-config-file.j2
+#         dest: /etc/nginx/conf.d/nginx-proxy-configuration-file.conf
 
     - name: Start nginx service 
       service:
          name: nginx
-         state: started
+         state: restarted
          enabled: yes
       tags: start-nginx
 
 # you can add tasks like this
 #    - import_tasks: tasks/common/get_hostname.yml
+

@@ -1,0 +1,71 @@
+---
+
+keycloak_prerequested_package_deb:
+  - openjdk-8-jre
+
+keycloak_prerequested_package_rpm:
+  - openjdk-8-jre
+
+# keycloak configuration / domain, cluster, single
+keycloak_configuration_mode: domain
+
+keycloak_disable_ssl: True
+
+#keycloak_archive_name: keycloak-5.0.0.tar.gz
+#keycloak_archive_extract_name: keycloak-5.0.0
+
+keycloak_archive_name: keycloak-6.0.0.tar.gz
+
+keycloak_archive_extract_name: keycloak-6.0.0
+
+keycloak_pg_jdbc_jar_name: postgresql-42.2.5.jar
+
+keycloak_directory: /usr/local/keycloack
+
+keycloak_install_path: "{{ keycloak_directory }}/{{ keycloak_archive_extract_name }}"
+
+keycloak_bin_path: "{{ keycloak_install_path }}/bin"
+
+keycloak_pg_jdbc_driver_path: "{{ keycloak_install_path }}/modules/system/layers/keycloak/org/postgresql/main"
+
+keycloak_main_config_path: "{{ keycloak_install_path }}/domain/configuration"
+
+#keycloak_pg_jdbc_driver_path: "{{ keycloak_directory }}/{{ keycloak_archive_extract_name }}/modules/system/layers/keycloak/org/postgresql/main"
+#keycloak_main_config_path: "{{ keycloak_directory }}/{{ keycloak_archive_extract_name }}/domain/configuration"
+
+keycloak_authentification_mgmt_user: keycloak-auth
+
+keycloak_authentification_password: kEyCl0@k_
+
+keycloak_secret_server_token: empty
+
+keycloak_admin_user: admin
+
+keycloak_admin_password: admin
+
+keycloak_master_socket_binds_offset: False
+
+keycloak_slave_socket_binds_offset: False
+
+keycloak_disable_internal_lb: True
+
+keycloak_master_proxy_address_forwarding: True
+
+keycloak_master_redirect_socket: True
+
+keycloak_max_pool_size: 20
+
+# 
+keycloak_pg_database_ip: 10.78.218.111
+keycloak_pg_database_user: "{{ db_keycloak_user.db_username }}"
+keycloak_pg_database_password: "{{ db_keycloak_user.db_password }}"
+keycloak_pg_database_port: "{{ db_keycloak_user.db_port }}"
+keycloak_pg_database_name: "{{ db_keycloak_user.db_name }}"
+
+#
+keycloak_nginx_upstream_name: kcservers
+keycloak_default_port: 8080
+keycloak_nginx_upstream_maxfail: 3
+keycloak_nginx_upstream_timeout: 15s
+keycloak_nginx_server_name: keycloak-mobiwan-rec.sgmaroc.root.net
+

@@ -11,9 +11,12 @@
     - name: Dump the database before removing it
       become_user: postgres
       postgresql_db:
-         name: "{{ db_name }}"
+         name: "{{ item.db_name }}"
          state: dump
          target: "{{ db_dump_path }}db_dump.sql.gz"
+      with_items:
+        - "{{ db_mobiwan_user }}"
+        - "{{ db_keycloak_user }}"
       when: on_db_remove_perform_dump
 
     - name: Stop the databese service

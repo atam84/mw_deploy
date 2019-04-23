@@ -15,7 +15,7 @@ artifactories_are_not_in_local: False
 artifactories_local_path: ../../files/arch
 
 # The default path is /lib/systemd/system/ and here we store all services configurations files
-services_path: /var/tmp
+services_path: /lib/systemd/system
 
 # Here we store the downloaded files
 download_root_path: /tmp

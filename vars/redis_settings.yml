@@ -1,0 +1,34 @@
+---
+
+redis_enable_debug_mode: False
+
+redis_compilation_deps_rpm_packages:
+  - make
+  - gcc
+  - tcl
+
+redis_compilation_deps_deb_packages:
+  - make
+  - gcc
+  - build-essential
+  - tcl
+
+redis_port_master: 6379
+
+redis_port_slave: 6378 
+
+redis_log_path: /var/log/redis
+
+redis_root_working_dir: /data/redis
+
+redis_create_systemd_services:
+  master: True
+  slave: True
+
+redis_install_directory: /usr/local/
+
+redis_create_cluster: True
+
+redis_cluster_replicas: 1
+
+# redis-cli --cluster create 10.78.218.111:6379 10.78.218.97:6379 10.78.218.154:6379 10.78.218.111:6378 10.78.218.97:6378 10.78.218.154:6378 --cluster-replicas 1

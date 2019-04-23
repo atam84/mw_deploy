@@ -1,0 +1,35 @@
+---
+- name: '[0_0] - Nginx servers initialization'
+  hosts: redis-cluster
+  remote_user: ansible-adm
+  become: yes
+  gather_facts: yes
+  vars:
+    redis_masters: ""
+    redis_slaves: ""
+  vars_files:
+    - ../../vars/main.yml
+    - ../../vars/redis_settings.yml
+  tasks:
+    - name: Test redis deployment using ping-pong
+      shell: redis-cli ping
+      register: redispong
+      ignore_errors: yes
+
+    - debug:
+         msg: "{{ redispong }}"
+
+    - set_fact:
+         redis_masters: "{{ redis_masters }} {{ item }}:{{ redis_port_master }}"
+      when: hostvars[item]['is-master'] == True
+      with_items: "{{ groups['redis-cluster'] }}"
+
+    - set_fact:
+         redis_slaves: "{{ redis_slaves }} {{ item }}:{{ redis_port_slave }}"
+      when: hostvars[item]['is-slave'] == True
+      with_items: "{{ groups['redis-cluster'] }}" 
+
+    - debug:
+         msg: "{{ redis_masters }}{{redis_slaves }}"
+
+

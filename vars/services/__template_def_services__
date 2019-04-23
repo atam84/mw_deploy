@@ -6,27 +6,26 @@ packages_deb:
  - java-common
  - openjdk-8-jre
 packages_rpm:
- - java-common
- - openjdk-8-jre
-artifactoryArchiveName: __SERVICE_NAME__.tar
-url: __TO_MODIFY_USE_COMPLETE_PATH_TO_THE_PACKAGE__/__SERVICE_NAME__.tar
-dest: /var/tmp/__SERVICE_NAME__
+ - java-1.8.0-openjdk
+artifactoryArchiveName: __SERVICE_NAME__.jar
+url: ../../files/arch/__SERVICE_NAME__.jar
+dest: /usr/local/microservices/__SERVICE_NAME__
 timeout: 30
 mode: 0644
-owner: __OWNER__
-group: __GROUP_OWNER__
+owner: mobiwan
+group: mobiwan
 Unit:
-   Description: Service __SERVICE_NAME__
-   Documentation: __SERVICE_DOCUMENTATION_DOCUMENT_OR_URL__
+   Description: __SERVICE_NAME__ mobiwan microservice
    After: network
    Requires: network
 Install:
-   Alias: __ALIAS_SERVICE_NAME__
+   Alias: __SERVICE_NAME__.service
+   WantedBy: multi-user.target
 Service:
    Type: Simple
-   ExecStart: /usr/bin/java -Dspring.profiles.active={{global_profile}} -Dspring.cloud.config.uri={{global_config_server_url}} -jar 
-   User: __USER__
-   Group: __GROUP_USER__
+   ExecStart: /usr/bin/java -Dspring.profiles.active={{global_profile}} -Dspring.cloud.config.uri={{global_config_server_url}} -jar /usr/local/microservices/__SERVICE_NAME__/__SERVICE_NAME__.jar
+   User: mobiwan
+   Group: mobiwan
    ExecStop: /bin/kill -KILL ${MAINPID}
    ExecReload: /bin/kill -HUP ${MAINPID}
    RemainAfterExit: False

@@ -1,5 +1,18 @@
 ---
+
 check_hostname: True
+
 set_new_prompt: False
+
 global_profile: dev
+
 global_config_server_url: http://config-server.local.net:8088/
+
+root_path: /home/ansible-adm/test002
+
+archive_path: "{{ root_path }}/files/arch"
+
+template_path: "{{ root_path }}/templates"
+
+binaries_path: "{{ root_path }}/files/bin"
+

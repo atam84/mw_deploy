@@ -1,0 +1,171 @@
+---
+
+- name: '[0_0] - keycloak installation'
+  hosts: keycloak
+  remote_user: ansible-adm
+  become: yes
+  gather_facts: yes
+  vars_files:
+    - ../../vars/main.yml
+    - ../../vars/database_settings.yml
+    - ../../vars/keycloak_settings.yml
+  tasks:
+    - name: Prevent keycloak already running in the machine, we stop it
+      service:
+         name: keycloak.service
+         state: stopped
+         enabled: yes
+      ignore_errors: True
+
+    # When the base OS is Debian
+    - name: (deb) Install prerequestes packages
+      apt:
+         name: "{{ keycloak_prerequested_package_deb }}"
+         state: present
+      when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+    # When the base OS is Redhat
+    - name: (rpm) Install prerequestes packages
+      yum:
+         name: "{{ keycloak_prerequested_package_rpm }}"
+         state: present
+      when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+
+    - name: Create target directory for keycloak
+      file:
+         path: "{{ keycloak_directory }}"
+         state: directory
+         mode: 0755
+
+    - name: Transfert and unarchive keycloak
+      unarchive:
+         src: "{{ archive_path }}/{{ keycloak_archive_name }}"
+         dest: "{{ keycloak_directory }}"
+
+    - name: Create target directory for PostgreSQL JDBC driver
+      file:
+         path: "{{ keycloak_pg_jdbc_driver_path }}"
+         state: directory
+         mode: 0755
+
+    - name: Transfert PostgreSQL JDBC java Driver
+      copy:
+         src: "{{ archive_path }}/{{ keycloak_pg_jdbc_jar_name }}"
+         dest: "{{ keycloak_pg_jdbc_driver_path }}"
+
+    - name: Create module.xml for postgreSQL JDBC java driver
+      template:
+         src: "{{ template_path }}/keycloak_jdbc_module_xml.j2"
+         dest: "{{ keycloak_pg_jdbc_driver_path }}/module.xml"
+
+    - name: Keycloak domain configuration
+      template:
+         src: "{{ template_path }}/keycloak_domain_xml.j2"
+         dest: "{{ keycloak_main_config_path }}/domain.xml"
+
+    - set_fact:
+         keycloak_master_ip: "{{ item }}"
+      when: hostvars[item]['function'] == "master"
+      with_items: "{{ groups['keycloak'] }}"
+    - debug:
+         msg: "keycloack master address {{ keycloak_master_ip }}"
+
+    - name: Keycloak Master configuration
+      template:
+         src: "{{ template_path }}/keycloak_host-master_xml.j2"
+         dest: "{{ keycloak_main_config_path }}/host-master.xml"
+      when: hostvars[inventory_hostname]['function'] == "master"
+
+    - name: Create management User
+      shell: |
+         cd "{{keycloak_directory}}/{{ keycloak_archive_extract_name }}/bin" && \
+         ./add-user.sh --user "{{ keycloak_authentification_mgmt_user }}" --password "{{ keycloak_authentification_password }}" --realm ManagementRealm --enable --display-secret | grep secret | awk -F "\"" '{print $2}'
+      register: secret
+      delegate_facts: True
+      when: hostvars[inventory_hostname]['function'] == "master"
+
+    - set_fact:
+         keycloak_secret_server_token: "{{ hostvars[keycloak_master_ip]['secret']['stdout'] }}"
+    - debug:
+         msg: "{{ keycloak_secret_server_token }}"
+
+    - name: Keycloak Slave configuration
+      vars:
+         keycloak_slave_ip: "{{ inventory_hostname }}"
+      template:
+         src: "{{ template_path }}/keycloak_host-slave_xml.j2"
+         dest: "{{ keycloak_main_config_path }}/host-slave.xml"
+      when: hostvars[inventory_hostname]['function'] == "slave"
+
+    - name: Create configuration directory for users
+      file:
+         path: "{{keycloak_directory}}/{{ keycloak_archive_extract_name }}/domain/servers/server-one/configuration"
+         state: directory
+      when: hostvars[inventory_hostname]['function'] == "master"
+
+    - name: Create Admin user
+      shell: |
+         cd "{{keycloak_directory}}/{{ keycloak_archive_extract_name }}/bin" && \
+         ./add-user-keycloak.sh --sc ../domain/servers/server-one/configuration -u "{{ keycloak_admin_user }}" -p "{{ keycloak_admin_password }}"
+      ignore_errors: True
+      when: hostvars[inventory_hostname]['function'] == "master"
+
+    - name: Create keycloak service
+      vars:
+         keycloak_service_target_config: "{{hostvars[inventory_hostname]['function'] }}"
+         keycloak_service_description: "Keycloak service ({{hostvars[inventory_hostname]['function'] }})"
+         keycloak_host_address: "{{ inventory_hostname }}"
+      template:
+         src: "{{ template_path }}/keycloak_service.j2"
+         dest: "/lib/systemd/system/keycloak.service"
+
+    - name: Reload daemon systemd configuration
+      systemd:
+         daemon_reload: yes
+
+    - name: Enable and start keycloak service
+      service:
+         name: keycloak.service
+         state: started
+         enabled: yes
+
+    - name: Pause for 1 minute to ensure keycloak services is started
+      pause:
+         minutes: 1
+
+
+
+
+- name: '[0_0] - Keycloak database operation'
+  hosts: keycloak-db
+  remote_user: ansible-adm
+  become: yes
+  become_user: postgres
+  gather_facts: no
+  vars_files:
+    #- ../../vars/main.yml
+    - ../../vars/database_settings.yml
+    - ../../vars/keycloak_settings.yml
+  tasks:
+    - name: Disabling keycloak ssl mode
+      shell: |
+         psql -c "update realm set ssl_required='NONE'" -d "{{ db_keycloak_user.db_name }}"
+      register: isssldisabled
+      ignore_errors: True
+      when: keycloak_disable_ssl
+
+    - name: is ssl disabled ?
+      debug:
+         msg: "{{ isssldisabled.stdout }}"
+      when: keycloak_disable_ssl
+
+    # New in version 2.8 it disabled because we use version 2.7
+    #- name: Database update = disabling ssl
+    #  postgresql_query:
+    #     login_host: "{{ keycloak_pg_database_ip }}"
+    #     login_user: "{{ db_keycloak_user.db_username }}"
+    #     login_password: "{{ db_keycloak_user.db_password }}"
+    #     db: "{{ db_keycloak_user.db_name }}"
+    #     port: "{{ db_keycloak_user.db_port }}"
+    #     query: update realm set ssl_required='NONE';
+    #  run_once: True

@@ -1,0 +1,19 @@
+bind 0.0.0.0
+protected-mode no
+port {{ redis_port_slave }}
+tcp-backlog 511
+timeout 0
+tcp-keepalive 300
+supervised systemd
+loglevel notice
+logfile "/var/log/redis/slave/redis-{{ redis_port_slave }}.log"
+#always-show-logo no
+stop-writes-on-bgsave-error yes
+rdbcompression yes
+dbfilename dump-{{ redis_port_slave }}.rdb
+dir {{ redis_root_working_dir }}/slave-{{ redis_port_slave }}/
+cluster-enabled yes
+cluster-config-file {{ redis_root_working_dir }}/config/{{ redis_port_slave }}/node-cluster.conf
+cluster-node-timeout 15000
+appendonly yes
+appendfilename node-cl-slave-{{ redis_port_slave }}-{{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}.aof

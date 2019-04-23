@@ -6,25 +6,24 @@ packages_deb:
  - java-common
  - openjdk-8-jre
 packages_rpm:
- - java-common
- - openjdk-8-jre
-artifactoryArchiveName: 7z920.tar.bz2
-url: /home/ansible-adm/test002/files/arch/package.jar
-dest: /var/tmp/user-management-gui
+ - java-1.8.0-openjdk
+artifactoryArchiveName: user-management-gui.jar
+url: ../../files/arch/user-management-gui.jar
+dest: /usr/local/microservices/user-management-gui
 timeout: 30
 mode: 0644
-owner: root
-group: root
+owner: mobiwan
+group: mobiwan
 Unit:
-   Description: Service user-management-gui
-   Documentation: __SERVICE_DOCUMENTATION_DOCUMENT_OR_URL__
+   Description: user-management-gui mobiwan microservice
    After: network
    Requires: network
 Install:
-   Alias: __ALIAS_SERVICE_NAME__
+   Alias: user-management-gui.service
+   WantedBy: multi-user.target
 Service:
    Type: Simple
-   ExecStart: __HOW_THE_BINARY_WILL_EXEC__
+   ExecStart: /usr/bin/java -Dspring.profiles.active={{global_profile}} -Dspring.cloud.config.uri={{global_config_server_url}} -jar /usr/local/microservices/user-management-gui/user-management-gui.jar
    User: mobiwan
    Group: mobiwan
    ExecStop: /bin/kill -KILL ${MAINPID}

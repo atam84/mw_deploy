@@ -1,0 +1,237 @@
+---
+- name: '[0_0] - Nginx servers initialization'
+  hosts: redis-cluster
+  remote_user: ansible-adm
+  become: yes
+  gather_facts: yes
+  vars:
+    redis_masters: ""
+    redis_slaves: ""
+  vars_files:
+    - ../../vars/main.yml
+    - ../../vars/redis_settings.yml
+  tasks:
+    - name: Stop redis service on masters if exist
+      service:
+         name: redis-master
+         state: stopped
+         enabled: no
+      ignore_errors: yes
+      when: hostvars[inventory_hostname]['is-master'] == True
+
+    - name: Stop redis service on slaves if exist
+      service:
+         name: redis-slave
+         state: stopped
+         enabled: no
+      ignore_errors: yes
+      when: hostvars[inventory_hostname]['is-slave'] == True
+
+    - name: Stop redis service for default installation if exist
+      service:
+         name: redis
+         state: stopped
+         enabled: no
+      ignore_errors: yes
+
+    - name: Create redis group
+      group:
+         name: redis
+         gid: 994
+         state: present
+
+    - name: Create redis user
+      user:
+         append: yes
+         name: redis
+         comment: Redis Database Server
+         create_home: no
+         uid: 997
+         group: redis
+         system: True
+         shell: /sbin/nologin
+
+    - name: (deb) Install compilation tools
+      apt:
+         name: "{{ redis_compilation_deps_deb_packages }}"
+         state: present
+      tags: install-redis
+      when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+
+    - name: (rpm) Install compilation tools
+      yum:
+         name: "{{ redis_compilation_deps_rpm_packages }}"
+         state: present
+      tags: install-redis
+      when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+
+
+    # 
+    - name: Unarchive downloaded files if needed
+      unarchive:
+         src: "{{ archive_path }}/redis-5.0.4.tar.gz"
+         dest: "/var/tmp/"
+         #remote_src: yes
+      ignore_errors: yes 
+
+    - name: Set vm overcommit memory to 1
+      become_user: root
+      sysctl:
+         name: vm.overcommit_memory
+         value: 1
+         state: present
+      ignore_errors: True
+
+    - name: Set max connexion to 65535
+      become_user: root
+      sysctl:
+         name: net.core.somaxconn
+         value: 65535
+         #sysctl_set: yes
+         state: present
+      ignore_errors: True
+
+    - name: Set max tcp_max_syn_backlog to 65535
+      become_user: root
+      sysctl:
+         name: net.ipv4.tcp_max_syn_backlog
+         value: 65536
+         state: present
+         reload: yes
+      ignore_errors: True
+
+
+    - name: Compile jemalloc lua hiredis linenoise redis 5.0.4 deps
+      shell: "cd /var/tmp/redis-5.0.4/deps/ && make jemalloc lua hiredis linenoise"
+
+    - name: Compile redis 5.0.4
+      shell: "cd /var/tmp/redis-5.0.4/ && make && make PREFIX=\"{{ redis_install_directory }}\" install"
+
+    - name: Create directories structures for logs and work spaces
+      file:
+         path: "{{ item }}"
+         state: directory
+      with_items:
+         - "{{ redis_root_working_dir }}"
+         - "{{ redis_log_path }}"
+
+    - name: Create configuration directories struture for masters
+      file:
+         path: "{{ redis_root_working_dir }}/config/{{ redis_port_master }}"
+         state: directory
+      when: hostvars[inventory_hostname]['is-master'] == True
+
+    - name: Create configuration directories struture for slaves
+      file:
+         path: "{{ redis_root_working_dir }}/config/{{ redis_port_slave }}"
+         state: directory
+      when: hostvars[inventory_hostname]['is-slave'] == True
+
+    - name: Create working directories for masters
+      file:
+         path: "{{ redis_root_working_dir }}/master-{{ redis_port_master }}"
+         state: directory
+      when: hostvars[inventory_hostname]['is-master'] == True
+
+    - name: Create working directories for slaves
+      file:
+         path: "{{ redis_root_working_dir }}/slave-{{ redis_port_slave }}"
+         state: directory
+      when: hostvars[inventory_hostname]['is-slave'] == True
+
+    - file:
+         path: "/var/log/redis/master/"
+         state: directory
+      when: hostvars[inventory_hostname]['is-master'] == True
+
+    - file:
+         path: "/var/log/redis/slave/"
+         state: directory
+      when: hostvars[inventory_hostname]['is-slave'] == True
+
+    - name: Create masters config files
+      template:
+         src: ../../templates/redis-master-config-file.j2
+         dest: "{{ redis_root_working_dir }}/config/{{ redis_port_master }}/redis.conf"
+      when: hostvars[inventory_hostname]['is-master'] == True
+
+
+    - name: Create slaves config files
+      template:
+         src: ../../templates/redis-slave-config-file.j2
+         dest: "{{ redis_root_working_dir }}/config/{{ redis_port_slave }}/redis.conf"
+      when: hostvars[inventory_hostname]['is-slave'] == True
+
+    - name: Make systemd services for redis
+      template:    
+         src: ../../templates/redis-master-service.j2
+         dest: "/lib/systemd/system/redis-master.service"
+      when: hostvars[inventory_hostname]['is-master'] == True
+
+    - name: Make systemd services for slave
+      template:
+         src: ../../templates/redis-slave-service.j2
+         dest: "/lib/systemd/system/redis-slave.service"
+      when: hostvars[inventory_hostname]['is-slave'] == True
+
+    # this is systemctl daemon-reload
+    - name: Reload systemd configuration
+      systemd:
+         daemon_reload: yes
+
+    - name: Start redis service
+      service:
+         name: redis-master
+         state: started
+         enabled: yes
+      when: hostvars[inventory_hostname]['is-master'] == True
+
+    - name: Start redis service on slaves
+      service:
+         name: redis-slave
+         state: started
+         enabled: yes
+      when: hostvars[inventory_hostname]['is-slave'] == True
+
+    - name: Test redis deployment using ping-pong
+      shell: redis-cli ping
+      register: redispong
+      ignore_errors: yes
+
+    - debug:
+         msg: "{{ redispong.stdout }}"
+
+    - set_fact:
+         redis_masters: "{{ redis_masters }} {{ item }}:{{ redis_port_master }}"
+      when: hostvars[item]['is-master'] == True
+      with_items: "{{ groups['redis-cluster'] }}"
+
+    - set_fact:
+         redis_slaves: "{{ redis_slaves }} {{ item }}:{{ redis_port_slave }}"
+      when: hostvars[item]['is-slave'] == True
+      with_items: "{{ groups['redis-cluster'] }}" 
+
+    - debug:
+         msg: "{{ redis_masters }}{{ redis_slaves }}"
+
+    - name: Initialize redis cluster
+      shell: |
+        echo yes | redis-cli --cluster create {{ redis_masters }}{{ redis_slaves }} --cluster-replicas {{ redis_cluster_replicas }}
+      register: createrediscluster
+      ignore_errors: yes
+      when: hostvars[item]['cluster-initiator'] == True and redis_create_cluster == True
+      with_items: "{{ groups['redis-cluster'] }}"
+
+    - debug:
+         msg: "{{ createrediscluster }}"
+      when: hostvars[item]['cluster-initiator'] == True and redis_create_cluster == True
+      with_items: "{{ groups['redis-cluster'] }}"
+
+#####
+#redis_create_cluster: True
+#
+#redis_cluster_replicas: 1
+#
+# redis-cli --cluster create 10.78.218.111:6379 10.78.218.97:6379 10.78.218.154:6379 10.78.218.111:6378 10.78.218.97:6378 10.78.218.154:6378 --cluster-replicas 1
+#####

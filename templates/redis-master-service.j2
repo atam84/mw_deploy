@@ -1,0 +1,17 @@
+[Unit]
+Description=Redis Master
+After=network.target
+
+[Service]
+#Type=notify
+PIDFile={{ redis_root_working_dir }}/config/{{ redis_port_master }}/redis.pid
+User=root
+#User=redis
+#Group=redis
+#ExecStartPre=/bin/mkdir -p /var/log/redis/master/{{ redis_port_master }}
+ExecStart=/usr/local/bin/redis-server {{ redis_root_working_dir }}/config/{{ redis_port_master }}/redis.conf
+ExecStop=/usr/local/bin/redis-cli shutdown
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

@@ -6,25 +6,24 @@ packages_deb:
  - java-common
  - openjdk-8-jre
 packages_rpm:
- - java-common
- - openjdk-8-jre
-artifactoryArchiveName: 7z920.tar.bz2
-url: /home/ansible-adm/test002/files/arch/package.jar
-dest: /var/tmp/cmi-payment
+ - java-1.8.0-openjdk
+artifactoryArchiveName: cmi-payment.jar
+url: ../../files/arch/cmi-payment.jar
+dest: /usr/local/microservices/cmi-payment
 timeout: 30
 mode: 0644
-owner: root
-group: root
+owner: mobiwan
+group: mobiwan
 Unit:
-   Description: Service cmi-payment
-   Documentation: __SERVICE_DOCUMENTATION_DOCUMENT_OR_URL__
+   Description: cmi-payment mobiwan microservice
    After: network
    Requires: network
 Install:
-   Alias: __ALIAS_SERVICE_NAME__
+   Alias: cmi-payment.service
+   WantedBy: multi-user.target
 Service:
    Type: Simple
-   ExecStart: __HOW_THE_BINARY_WILL_EXEC__
+   ExecStart: /usr/bin/java -Dspring.profiles.active={{global_profile}} -Dspring.cloud.config.uri={{global_config_server_url}} -jar /usr/local/microservices/cmi-payment/cmi-payment.jar
    User: mobiwan
    Group: mobiwan
    ExecStop: /bin/kill -KILL ${MAINPID}

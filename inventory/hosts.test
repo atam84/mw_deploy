@@ -1,11 +1,17 @@
+[redis-cluster]
+10.78.218.111 is-master=True is-slave=True cluster-initiator=True
+10.78.218.97  is-master=True is-slave=True
+10.78.218.154 is-master=True is-slave=True
+
 [database]
-10.78.218.154 host_name=database domain_name=local.net service=monitoring
+10.78.218.111 host_name=database domain_name=local.net service=monitoring is-keycloak-db=True
 
 [zuul]
 10.78.218.97 host_name=zuul-keycloack domain_name=local.net
 
-[keycloack]
-10.78.218.97
+[keycloak]
+10.78.218.97 function=master
+10.78.218.154 function=slave
 
 [openldap]
 10.78.218.154
@@ -13,17 +19,20 @@
 [eureka]
 10.78.218.97
 
+[keycloak-db]
+10.78.218.111
+
 [geoloc]
 10.78.218.111 host_name=geoloc-proxy service=account,ccp-user,customer,ged-document,mobiwan-user,otp,transaction,audit-piste,cmi-payment,exchange-rate,geoloc-gab,notification,recipient,user-management-gui,card,customer-product,favorite,operation,user-proxy
 
-[ccp-user]
-10.78.218.111
 
 [user-proxy]
-10.78.218.111
+10.78.218.111 is-keycloak-upstream=True
 
 [nginx-proxy:children]
 zuul
+user-proxy
+
 [infrastructure:children]
 database
 micro-services

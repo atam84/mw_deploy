@@ -1,26 +1,40 @@
 ---
-db_username: modiwan_user
 
-db_password: md5hashPassword
+db_mobiwan_user:
+    db_username: modiwan
+    db_password: M0b1Vv@N_P6
+    db_name: modiwan_db
+    db_port: 5432
+    db_user_expire: infinity
+    db_role_attr: CREATEDB,CREATEROLE,SUPERUSER
 
-db_name: pg_dataCollector
+db_keycloak_user:
+    db_username: keycloak
+    db_password: KeYc10k_P6
+    db_name: keycloak_db
+    db_port: 5432
+    db_user_expire: infinity
+    db_role_attr: CREATEDB,CREATEROLE,SUPERUSER
 
-db_port: 5432
-
-db_user_expire: infinity
-
-db_role_attr: CREATEDB,CREATEROLE,SUPERUSER
-
-db_dependencies:
+db_deb_dependencies:
   - bash
   - openssl
   - libssl-dev
   - libssl-doc
 
-db_packages:
+db_deb_packages:
   - postgresql
   - postgresql-contrib
   - libpq-dev
+  - python-psycopg2
+
+db_rpm_dependencies:
+  - bash
+  - openssl
+
+db_rpm_packages:
+  - postgresql
+  - postgresql-server
   - python-psycopg2
 
 on_db_remove_perform_dump: yes
@@ -30,4 +44,8 @@ on_db_remove_purge_package: yes
 on_db_remove_purge_deps: False
 
 db_dump_path: /var/tmp/
+
+db_allow_external_connexion: True
+
+db_listen_on_all_interfaces: True
 

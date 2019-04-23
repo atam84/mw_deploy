@@ -6,27 +6,24 @@ packages_deb:
  - java-common
  - openjdk-8-jre
 packages_rpm:
- - java-common
- - openjdk-8-jre
-artifactoryArchiveName: package.tar
-isArchive: True
-extract: True
-url: /home/ansible-adm/test002/files/arch/package.tar
-dest: /var/tmp/account
+ - java-1.8.0-openjdk
+artifactoryArchiveName: account.jar
+url: ../../files/arch/account.jar
+dest: /usr/local/microservices/account
 timeout: 30
 mode: 0644
-owner: root
-group: root
+owner: mobiwan
+group: mobiwan
 Unit:
-   Description: Service account
-   Documentation: __SERVICE_DOCUMENTATION_DOCUMENT_OR_URL__
+   Description: account mobiwan microservice
    After: network
    Requires: network
 Install:
+   Alias: account.service
    WantedBy: multi-user.target
 Service:
    Type: Simple
-   ExecStart: /usr/bin/java -Dspring.profiles.active={{ global_profile }} -Dspring.cloud.config.uri={{ global_config_server_url }} -jar /var/tmp/account/package.jar
+   ExecStart: /usr/bin/java -Dspring.profiles.active={{global_profile}} -Dspring.cloud.config.uri={{global_config_server_url}} -jar /usr/local/microservices/account/account.jar
    User: mobiwan
    Group: mobiwan
    ExecStop: /bin/kill -KILL ${MAINPID}

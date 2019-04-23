@@ -3,16 +3,16 @@
   hosts: database
   remote_user: ansible-adm
   become: yes
-  gather_facts: no
+  gather_facts: yes
   vars_files:
     - ../../vars/main.yml
     - ../../vars/database_settings.yml
   tasks:
     #
     #
-    - name: Install postgreSQL dependencies packages
+    - name: (deb) Install postgreSQL dependencies packages
       apt:
-         name: "{{ db_dependencies }}"
+         name: "{{ db_deb_dependencies }}"
          update_cache: yes
          state: latest
       tags: package-dep
@@ -20,9 +20,9 @@
 
     #
     #
-    - name: Install postgreSQL packages
+    - name: (deb) Install postgreSQL packages
       apt:
-         name: "{{ db_packages }}"
+         name: "{{ db_deb_packages }}"
          update_cache: yes
          state: present
       tags: install-postgres
@@ -30,23 +30,23 @@
 
     #
     #
-    - name: Install postgreSQL dependencies packages
+    - name: (rpm) Install postgreSQL dependencies packages
       yum:
-         name: "{{ db_dependencies }}"
+         name: "{{ db_rpm_dependencies }}"
          update_cache: yes
          state: latest
       tags: package-dep
-      when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+      when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
 
     #
     #
-    - name: Install postgreSQL packages
+    - name: (rpm) Install postgreSQL packages
       yum:
-         name: "{{ db_packages }}"
+         name: "{{ db_rpm_packages }}"
          update_cache: yes
          state: present
       tags: install-postgres
-      when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+      when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
 
     #
     #
@@ -57,30 +57,80 @@
          enabled: yes
       tags: db-startservice
 
+    - debug:
+         msg: "{{ item.db_name }}"
+      with_items:
+        - "{{ db_mobiwan_user }}"
+        - "{{ db_keycloak_user }}"
+
+    - pause:
+         seconds: 10
+    #
+    #
+    - name: Ask postgres to the config file location
+      become_user: postgres
+      shell: |
+         dirname $(psql -t -P format=unaligned -c 'show hba_file')
+      register: postgresconfigpath
+
+    #
+    #
+    - name: Allow other machine to connect to this server
+      lineinfile:
+         path: "{{ postgresconfigpath.stdout }}/pg_hba.conf"
+         line: "host    all             all             0.0.0.0/0               md5"
+         state: present
+      when: db_allow_external_connexion
+
+    #
+    #
+    - name: PostgreSQL listen address 0.0.0.0
+      lineinfile:
+         path: "{{ postgresconfigpath.stdout }}/postgresql.conf"
+         regexp: "^#listen_addresses"
+         line: "listen_addresses = '0.0.0.0'"
+      when: db_listen_on_all_interfaces
+
     #
     #
     - name: Create postgreSQL database
       become_user: postgres
       postgresql_db:
-         name: "{{ db_name }}"
-         port: "{{ db_port }}"
+         name: "{{ item['db_name'] }}"
+         port: "{{ item['db_port'] }}"
          ssl_mode: prefer
          state: present
       tags: createdb
+      with_items:
+        - "{{ db_mobiwan_user }}"
+        - "{{ db_keycloak_user }}"
 
     #
     #
     - name: Create database user
       become_user: postgres
       postgresql_user:
-         db: "{{ db_name }}"
-         name: "{{ db_username }}"
-         password: "{{ db_password }}"
-         expires: "{{ db_user_expire }}"
-         role_attr_flags: "{{ db_role_attr }}"
+         db: "{{ item.db_name }}"
+         name: "{{ item.db_username }}"
+         password: "{{ item.db_password }}"
+         expires: "{{ item.db_user_expire }}"
+         role_attr_flags: "{{ item.db_role_attr }}"
          state: present
       tags: db-createuser
+      with_items:
+        - "{{ db_mobiwan_user }}"
+        - "{{ db_keycloak_user }}"
 
+    #
+    #
+    - name: Restart the databese service
+      service:
+         name: postgresql
+         state: restarted
+         enabled: yes
+      tags: db-restartservice
+
+#
 # you can add tasks like this
 #    - import_tasks: tasks/common/get_hostname.yml
 
