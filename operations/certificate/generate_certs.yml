@@ -1,0 +1,133 @@
+---
+
+- name: '[0_0] - Nginx servers installation and configuration'
+  hosts: localhost
+  connection: local
+  remote_user: ansible-adm
+  become: no
+  gather_facts: yes
+  vars_files:
+    - ../../vars/main.yml
+    - ../../vars/cert_settings.yml
+  tasks:
+    - name: Generate private key (aes256)
+      openssl_privatekey:
+         path: "{{ cert_path }}/{{ item.filename.privatekey }}.key"
+         passphrase: "{{ item.private_key_passphrase }}"
+         size: "{{ item.private_key_size }}"
+         type: "{{ item.private_key_algorithm }}"
+         cipher: aes256
+         force: True
+      register: private_key_generated
+      when: item.generate_private_key == True
+      with_items: "{{ list_certs_definition }}"
+
+    - debug:
+         msg: "{{ private_key_generated }}"
+      when: certs_activate_debug_mode == True
+
+    - name: Genarate OpenSSL CSR (Certificate Signing Request)
+      openssl_csr:
+         path: "{{ cert_path }}/{{ item.filename.csr }}.csr"
+         privatekey_path: "{{ cert_path }}/{{ item.filename.privatekey }}.key"
+         privatekey_passphrase: "{{ item.private_key_passphrase }}"
+         locality_name: "{{ item.info.locality_name_L }}"
+         common_name: "{{ item.info.common_name_CN }}"
+         country_name: "{{ item.info.country_name_C }}"
+         organization_name: "{{ item.info.organization_name_O }}"
+         organizational_unit_name: "{{ item.info.organizational_unit_name_OU }}"
+         email_address: "{{ item.info.email_address_E }}"
+         subject_alt_name: "{{ item.info.subject_alt_name_SAN }}"
+         state_or_province_name: "{{ item.info.state_or_province_name_ST }}"
+         force: True
+      register: openssl_csr_generated
+      when: item.generate_csr == True
+      with_items: "{{ list_certs_definition }}"
+
+    - debug:
+         msg: "{{ openssl_csr_generated }}"
+      when: certs_activate_debug_mode == True
+
+    - name: Generate public key
+      openssl_publickey:
+         path: "{{ cert_path }}/{{ item.filename.publickey }}.pem"
+         privatekey_path: "{{ cert_path }}/{{ item.filename.privatekey }}.key"
+         privatekey_passphrase: "{{ item.private_key_passphrase }}"
+         force: True
+      register: public_key_generated
+      when: item.generate_public_key == True
+      with_items: "{{ list_certs_definition }}"
+
+    - debug:
+         msg: "{{ public_key_generated }}"
+      when: certs_activate_debug_mode == True
+
+    - name: Generate a Self Signed OpenSSL certificate
+      openssl_certificate:
+         path: "{{ cert_path }}/{{ item.filename.crt }}.crt"
+         privatekey_path: "{{ cert_path }}/{{ item.filename.privatekey }}.key"
+         csr_path: "{{ cert_path }}/{{ item.filename.csr }}.csr"
+         privatekey_passphrase: "{{ item.private_key_passphrase }}"
+         provider: selfsigned
+      register: self_signed_certificate
+      when: item.generate_self_signed == True
+      with_items: "{{ list_certs_definition }}"
+
+    - debug:
+         msg: "{{ self_signed_certificate }}"
+      when: certs_activate_debug_mode == True
+
+    - name: Convert Public and Private key to PKCS-12
+      shell: |
+        openssl pkcs12 -export -in "{{ cert_path }}/{{ item.filename.crt }}.crt" \
+                       -inkey "{{ cert_path }}/{{ item.filename.privatekey }}.key" \
+                       -name "{{ item.keystore_alias }}" \
+                       -out "{{ cert_path }}/{{ item.filename.csr }}_pkcs12.p12" \
+                       -passout pass:"{{ item.private_key_passphrase }}" \
+                       -passin pass:"{{ item.private_key_passphrase }}" 
+      register: convert_to_p12
+      ignore_errors: yes
+      with_items: "{{ list_certs_definition }}"
+
+    - debug:
+         msg: "{{ convert_to_p12 }}"
+      when: certs_activate_debug_mode == True
+
+    #- name: Create keystores (JKS)
+    #  shell: |
+    #    /usr/bin/keytool -importcert -alias "{{ item.keystore_alias }}" \
+    #                     -file "{{ cert_path }}/{{ item.filename.crt }}" \
+    #                     -keystore "{{ cert_path }}/{{ item.keystore_dest }}.jks" \
+    #                     -storepass "{{ item.keystore_password }}" \
+    #                     -noprompt
+    #  register: java_jks_generated
+    #  when: item.insert_to_keystore == True
+    #  ignore_errors: yes
+    #  with_items: "{{ list_certs_definition }}"
+    #
+    #- debug:
+    #     msg: "{{ java_jks_generated }}"
+    #  when: certs_activate_debug_mode == True
+
+
+    - name: Create keystores (JKS) for PKCS-12
+      shell: |
+        /usr/bin/keytool -importkeystore \
+                         -deststorepass "{{ item.keystore_password }}" \
+                         -destkeystore "{{ cert_path }}/{{ item.keystore_dest }}.jks" \
+                         -srckeystore "{{ cert_path }}/{{ item.filename.csr }}_pkcs12.p12" \
+                         -srcstoretype pkcs12 \
+                         -deststoretype jks \
+                         -srcstorepass "{{ item.private_key_passphrase }}" \
+                         -noprompt 
+      register: java_jks_generated
+      #when: item.insert_to_keystore == True
+      ignore_errors: yes
+      with_items: 
+         - "{{ keycloak }}"
+
+    - debug:
+         msg: "{{ java_jks_generated }}"
+      when: certs_activate_debug_mode == True
+
+

@@ -9,6 +9,7 @@
     - ../../vars/main.yml
     - ../../vars/database_settings.yml
     - ../../vars/keycloak_settings.yml
+    - ../../vars/cert_settings.yml
   tasks:
     - name: Prevent keycloak already running in the machine, we stop it
       service:
@@ -79,7 +80,11 @@
     - name: Create management User
       shell: |
          cd "{{keycloak_directory}}/{{ keycloak_archive_extract_name }}/bin" && \
-         ./add-user.sh --user "{{ keycloak_authentification_mgmt_user }}" --password "{{ keycloak_authentification_password }}" --realm ManagementRealm --enable --display-secret | grep secret | awk -F "\"" '{print $2}'
+         ./add-user.sh --user "{{ keycloak_authentification_mgmt_user }}" \
+                       --password "{{ keycloak_authentification_password }}" \
+                       --realm ManagementRealm \
+                       --enable \
+                       --display-secret | grep secret | awk -F "\"" '{print $2}'
       register: secret
       delegate_facts: True
       when: hostvars[inventory_hostname]['function'] == "master"
@@ -109,6 +114,17 @@
          ./add-user-keycloak.sh --sc ../domain/servers/server-one/configuration -u "{{ keycloak_admin_user }}" -p "{{ keycloak_admin_password }}"
       ignore_errors: True
       when: hostvars[inventory_hostname]['function'] == "master"
+
+
+    #
+    #
+    - name: Push keystore
+      copy:
+         src: "{{ cert_path }}/{{ keycloak.keystore_dest }}.jks"
+         dest: "{{ keycloak_main_config_path }}/{{ keycloak.keystore_dest }}.jks" 
+    #
+    #
+    #
 
     - name: Create keycloak service
       vars:

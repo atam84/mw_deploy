@@ -1,0 +1,142 @@
+---
+
+- name: '[0_0] - Create services'
+  hosts: micro-services
+  remote_user: ansible-adm
+  become: yes
+  gather_facts: yes
+  vars_files:
+    - ../../vars/main.yml
+    - ../../vars/services_settings.yml
+  tasks:
+    # zuul
+    # eureka
+    # config
+    - name: Create directories destination for download if doesn't exist
+      vars:
+         service: "{{ lookup('vars', item) }}"
+      file:
+         path: "{{ download_root_path }}/{{ service.name }}"
+         state: directory
+         mode: 0755
+      register: dirdownloadstatus
+      with_items: "{{ hostvars[inventory_hostname]['service'].split(',') }}"
+      when: artifactories_are_not_in_local
+
+    # Always fired te target directory is in the services definition
+    - name: Create target directories to extract the archives if needed
+      vars:
+         service: "{{ lookup('vars', item) }}"
+      file:
+         path: "{{ service.dest }}"
+         state: directory
+         mode: 0755
+      register: dirdeststatus
+      with_items: "{{ hostvars[inventory_hostname]['service'].split(',') }}"
+
+    # When artifactories_are_not_in_local = False this mean here that we push the files target from the Ansible machine
+    # In the services definition section the path of target archive file is in service.url variable 
+    - name: Transfert file and unarchive from Ansible machine
+      vars:
+         service: "{{ lookup('vars', item) }}"
+      copy:
+         src: "{{ service.url }}"
+         dest: "{{ service.dest }}"
+      with_items: "{{ hostvars[inventory_hostname]['service'].split(',') }}"
+      when: artifactories_are_not_in_local == False
+
+    # used for debug :)
+    - name: Created download directories status
+      debug:
+         msg: "{{ dirdownloadstatus }}"
+      when: enable_debug_mode
+
+    # 
+    - name: Download artifactories
+      vars:
+         service: "{{ lookup('vars', item) }}"
+      get_url:
+         url: "{{ service.url }}"
+         dest: "{{ download_root_path }}/{{ service.name }}/{{ service.artifactoryArchiveName }}"
+         timeout: 30
+         mode: "{{ service.mode }}"
+         owner: "{{ service.owner }}"
+         group: "{{ service.group }}"
+         #url_username: "{{ url_username }}"
+         #url_password: "{{ url_password }}"
+         #use_proxy: "{{ user_proxy|no }}"
+      register: downloadstatus
+      with_items: "{{ hostvars[inventory_hostname]['service'].split(',') }}"
+      when: artifactories_are_not_in_local
+
+    # 
+    - name: Unarchive downloaded files if needed
+      vars:
+         service: "{{ lookup('vars', item) }}"
+      unarchive:
+         src: "{{ download_root_path }}/{{ service.name }}/{{ service.artifactoryArchiveName }}"
+         dest: "{{ service.dest }}"
+         remote_src: yes
+      ignore_errors: yes 
+      when: service.isArchive and service.extract
+      with_items: "{{ hostvars[inventory_hostname]['service'].split(',') }}"
+      when: artifactories_are_not_in_local
+
+    # 
+    - name: Unarchive local files if needed
+      vars:
+         service: "{{ lookup('vars', item) }}"
+      unarchive:
+         src: "{{ service.dest }}/{{ service.artifactoryArchiveName }}"
+         dest: "{{ service.dest }}"
+         remote_src: yes
+      ignore_errors: yes 
+      when: service.isArchive and service.extract
+      with_items: "{{ hostvars[inventory_hostname]['service'].split(',') }}"
+      when: artifactories_are_not_in_local == False
+
+    # 
+    - name: Created services status
+      debug:
+         msg: "{{ downloadstatus }}"
+      when: enable_debug_mode
+
+    # 
+    - name: Create service "{{ hostvars[inventory_hostname]['service'].split(',') }}"
+      vars:
+         service: "{{ lookup('vars', item) }}"
+      template:
+         src: ../../templates/service-config.j2
+         dest: "{{ services_path }}/{{ service.name }}.service"
+      register: srvcreatestatus
+      with_items: "{{ hostvars[inventory_hostname]['service'].split(',') }}"
+
+    # for debug :)
+    - name: Created services status
+      debug:
+         msg: "{{ srvcreatestatus }}"
+      when: enable_debug_mode
+
+    # this is systemctl daemon-reload
+    - name: Reload systemd configuration
+      systemd:
+         daemon_reload: yes
+
+    # Put the services in needed state
+    - name: Starting services
+      vars:
+         service: "{{ lookup('vars', item) }}"
+      service:
+         name: "{{ service.name }}"
+         state: "{{ service.state }}"
+         enabled: "{{ service.enabled }}"
+      register: servicestatus
+      with_items: "{{ hostvars[inventory_hostname]['service'].split(',') }}"
+
+    # for debug :)
+    - name: Staring services status
+      debug:
+         msg: "{{ servicestatus }}"
+      when: enable_debug_mode
+
+

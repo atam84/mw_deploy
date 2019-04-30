@@ -913,7 +913,7 @@
                 <buffer-cache name="default"/>
                 <server name="default-server">
                     <ajp-listener name="ajp" socket-binding="ajp"/>
-                    <http-listener name="default" socket-binding="http" redirect-socket="https" enable-http2="true"/>
+                    <http-listener name="default" socket-binding="http" redirect-socket="https" enable-http2="true" proxy-address-forwarding="true"/>
                     <https-listener name="https" socket-binding="https" security-realm="ApplicationRealm" enable-http2="true"/>
                     <host name="default-host" alias="localhost">
                         <location name="/" handler="welcome-content"/>
@@ -1006,6 +1006,17 @@
                         </properties>
                     </provider>
                 </spi>
+                <spi name="truststore">
+                    <provider name="file" enabled="true">
+                        <properties>
+                            <property name="file" value="{{ keycloak_directory }}/{{ keycloak_archive_extract_name }}/domain/configuration/{{ keycloak.keystore_dest }}.jks"/>
+                            <property name="password" value="{{ keycloak.keystore_password }}"/>
+                            <property name="hostname-verification-policy" value="ANY"/>
+                            <property name="disabled" value="false"/>
+                        </properties>
+                    </provider>
+                </spi>
+
             </subsystem>
         </profile>
         <!--
@@ -1095,7 +1106,7 @@
     <socket-binding-groups>
         <socket-binding-group name="standard-sockets" default-interface="public">
             <socket-binding name="ajp" port="${jboss.ajp.port:8009}"/>
-            <socket-binding name="http" port="${jboss.http.port:8080}"/>
+            <socket-binding name="http" interface="private" port="${jboss.http.port:8080}"/>
             <socket-binding name="https" port="${jboss.https.port:8443}"/>
             <socket-binding name="txn-recovery-environment" port="4712"/>
             <socket-binding name="txn-status-manager" port="4713"/>
@@ -1105,7 +1116,7 @@
         </socket-binding-group>
         <socket-binding-group name="ha-sockets" default-interface="public">
             <socket-binding name="ajp" port="${jboss.ajp.port:8009}"/>
-            <socket-binding name="http" port="${jboss.http.port:8080}"/>
+            <socket-binding name="http" interface="private" port="${jboss.http.port:8080}"/>
             <socket-binding name="https" port="${jboss.https.port:8443}"/>
             <socket-binding name="jgroups-mping" interface="private" multicast-address="${jboss.default.multicast.address:230.0.0.4}" multicast-port="45700"/>
             <socket-binding name="jgroups-tcp" interface="private" port="7600"/>
@@ -1142,3 +1153,4 @@
         </server-group>
     </server-groups>
 </domain>
+

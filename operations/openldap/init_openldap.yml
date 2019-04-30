@@ -4,15 +4,17 @@
   hosts: openldap
   remote_user: ansible-adm
   become: yes
-  gather_facts: no
+  gather_facts: yes
   vars_files:
+    - ../../vars/main.yml
+    - ../../vars/cert_settings.yml
     - ../../vars/openldap_settings.yml
   tasks:
     #
     #
     - name: (deb) Install openldap packages
       apt:
-         name: "{{ openldap_deb_packages }}"
+         name: "{{ ldap_deb_packages }}"
          state: present
       when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
 
@@ -20,19 +22,99 @@
     #
     - name: (rpm) Install openldap packages
       yum:
-         name: "{{ openldap_rpm_packages }}"
+         name: "{{ ldap_rpm_packages }}"
          state: present
       when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
 
     #
     #
+    - set_fact:
+         ldap: "{{ ldap.rhel_os }}"
+         debug_message: " *** Redhat OS Type configuration is loaded"
+      when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+     
+    - set_fact:
+         ldap: "{{ ldap.deb_os }}"
+         debug_message: " *** Debian OS Type configuration is loaded"
+      when: ansible_distribution == 'Ubuntu' or ansible_distribution == 'Debian'    
+
+    - debug:
+         msg: "{{ debug_message }} ---  {{ ldap }}" 
+
+    - name: Stop slapd service
+      service:
+         name: "{{ ldap.service_name }}"
+         state: stopped
+         enabled: yes
+
+    #
+    #
     - name: Generate the root password for ldap
-      shell: slappasswd -s "{{ openldap_server_rootpw }}"
+      shell: slappasswd -s "{{ ldap_rootpw }}"
       register: root_password
-      no_log: true
+      #no_log: true
 
     - debug:
          msg: "OpenLDAP = {{ root_password }}"
+
+
+    - name: Configure openLDAP to use securized port 636
+      lineinfile:
+         path: "{{ ldap.sys_config_file }}"
+         regexp: "^{{ ldap.slapd_service }}="
+         line: "{{ ldap.slapd_service }}=\"ldap://127.0.0.1:389/ ldaps:/// ldapi:///\""
+      register: inline_result
+
+    - debug:
+         msg: "{{ inline_result }}"
+
+    - name: Setting database type hdb
+      blockinfile:
+         path: "{{ ldap.default_config_file }}"
+         block: |
+            database hdb
+            rootpw {{ root_password.stdout }}
+         state: present
+
+    #
+    #
+    - name: Create certs, private and ldif directories
+      file:
+         path: "{{ item }}"
+         state: directory
+         mode: 0644
+         owner: "{{ ldap.user }}"
+         group: "{{ ldap.group }}"
+      with_items:
+         - "{{ ldap.paths.certs }}"
+         - "{{ ldap.paths.private }}"
+         - "{{ ldap.paths.ldif }}"
+
+
+
+    - name: Push certificate file
+      copy:
+         src: "{{ cert_path }}/{{ openldap.filename.crt }}"
+         dest: "{{ ldap.paths.certs }}/openldap.crt"
+         owner: "{{ ldap.user }}"
+         group: "{{ ldap.group }}"
+         mode: 0644
+    
+    - name: Push private key file
+      copy:
+         src: "{{ cert_path }}/{{ openldap.filename.privatekey }}"
+         dest: "{{ ldap.paths.private }}/openldap.pem"
+         owner: "{{ ldap.user }}"
+         group: "{{ ldap.group }}"
+         mode: 0644
+
+    - name: Copy database model
+      copy:
+         src: "{{ ldap.example_db }}"
+         dest: "{{ ldap.paths.db }}/DB_CONFIG"
+         owner: "{{ ldap.user }}"
+         group: "{{ ldap.group }}" 
+         remote_src: yes
 
     #
     #
@@ -44,8 +126,73 @@
     #
     - name: Starting/Restart openLDAP service
       service:
-         name: slapd
+         name: "{{ ldap.service_name }}"
          state: restarted
          enabled: yes
       register: servicestatus
+   
+   
+    - name: Apply slapd schemas
+      shell: |
+        ldapadd -Y EXTERNAL -H ldapi:/// -D "cn=config" -f "{{ ldap.paths.schemas }}/{{ item }}"
+      register: addldif
+      ignore_errors: yes
+      with_items:
+         - core.ldif
+         - cosine.ldif
+         - inetorgperson.ldif
+         - nis.ldif
+
+
+    - debug:
+         msg: "{{ addldif }}"
+
+
+    - name: Create change.ldif file
+      copy:
+         content: |
+            dn: olcDatabase={2}bdb,cn=config
+            changetype: modify
+            replace: olcSuffix
+            olcSuffix: dc=example,dc=com
+
+            dn: olcDatabase={2}bdb,cn=config
+            changetype: modify
+            replace: olcRootDN
+            olcRootDN: cn=Manager,dc=example,dc=com
+
+            dn: olcDatabase={2}bdb,cn=config
+            changetype: modify
+            replace: olcRootPW
+            olcRootPW: {{ root_password.stdout }}
+ 
+            dn: olcDatabase={2}bdb,cn=config
+            changetype: modify
+            replace: olcTLSCertificateKeyFile
+            olcTLSCertificateKeyFile: /etc/openldap/certs/openldap.key
+            -
+            replace: olcTLSCertificateFile
+            olcTLSCertificateFile: /etc/openldap/certs/openldap.crt
+
+            dn: cn=config
+            changetype: modify
+            replace: olcLogLevel
+            olcLogLevel: -1
+
+            dn: olcDatabase={1}monitor,cn=config
+            changetype: modify
+            replace: olcAccess
+            olcAccess: {0}to * by dn.base="gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth" read by dn.base="cn=Manager,dc=example,dc=com" read by * none
+         dest: "{{ ldap.paths.ldif }}/change.ldif"
+
+
+    - name: Apply change.ldif
+      shell: |
+         ldapmodify -Y EXTERNAL -H ldapi:/// -f "{{ ldap.paths.ldif }}/change.ldif"
+      register: ldifchange
+      ignore_errors: yes
+
+    - debug:
+         msg: "{{ ldifchange }}"
+
 

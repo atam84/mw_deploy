@@ -1,0 +1,21 @@
+---
+
+- name: '[0_0] - Create services'
+  hosts: zuul-service
+  remote_user: ansible-adm
+  become: yes
+  gather_facts: yes
+  vars_files:
+    - ../../vars/main.yml
+    - ../../vars/zuul_settings.yml
+  tasks:
+    # Stop the service
+
+    # Transfer the jar file
+
+    # Create directories structure
+
+    # Create the service file
+   
+    # Start the service
+

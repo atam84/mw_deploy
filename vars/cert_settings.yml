@@ -1,0 +1,97 @@
+---
+
+keycloak:
+   generate_self_signed: True
+   generate_private_key: True
+   generate_public_key: True
+   generate_csr: True
+   private_key_algorithm: RSA
+   private_key_size: 2048
+   private_key_passphrase: changeit
+   insert_to_keystore: True
+   keystore_alias: keycloak
+   keystore_password: changeit
+   keystore_dest: global_keystore    # .jks
+   filename:
+      privatekey: priv-keycloak      # .key
+      publickey: pub-keycloak        # .pem
+      csr: keycloak                  # .csr
+      crt: keycloak                  # .crt
+   info:
+      country_name_C: MA
+      locality_name_L: Casablanca
+      state_or_province_name_ST: Casablanca
+      organization_name_O: sgma
+      organizational_unit_name_OU: sgma - digital factory
+      common_name_CN: localhost
+      email_address_E: cert@sogen.ma
+      subject_alt_name_SAN: 'DNS:www.sogen.ma,DNS:m.sogen.ma'
+
+
+openldap:
+   generate_self_signed: True
+   generate_private_key: True
+   generate_public_key: True
+   generate_csr: True
+   private_key_algorithm: RSA
+   private_key_size: 2048
+   private_key_passphrase: changeit
+   insert_to_keystore: True
+   keystore_alias: openldap
+   keystore_password: changeit
+   keystore_dest: global_keystore
+   filename:
+      privatekey: priv-openldap
+      publickey: pub-openldap
+      csr: openldap
+      crt: openldap
+   info:
+      country_name_C: MA
+      locality_name_L: Casablanca
+      state_or_province_name_ST: Casablanca
+      organization_name_O: sgma
+      organizational_unit_name_OU: sgma - digital factory
+      common_name_CN: localhost
+      email_address_E: cert@sogen.ma
+      subject_alt_name_SAN: 'DNS:www.sogen.ma,DNS:m.sogen.ma'
+
+
+
+nginx:
+   generate_self_signed: True
+   generate_private_key: True
+   generate_public_key: True
+   generate_csr: True
+   private_key_algorithm: RSA
+   private_key_size: 2048
+   private_key_passphrase: changeit
+   insert_to_keystore: False
+   keystore_alias: nginx
+   keystore_password: changeit
+   keystore_dest: global_keystore
+   filename:
+      privatekey: priv-nginx
+      publickey: pub-nginx
+      csr: nginx
+      crt: nginx
+   info:
+      country_name_C: MA
+      locality_name_L: Casablanca
+      state_or_province_name_ST: Casablanca
+      organization_name_O: sgma
+      organizational_unit_name_OU: sgma - digital factory
+      common_name_CN: localhost
+      email_address_E: cert@sogen.ma
+      subject_alt_name_SAN: 'DNS:www.sogen.ma,DNS:m.sogen.ma'
+
+
+list_certs_definition:
+  - "{{ nginx }}"
+  - "{{ keycloak }}"
+  - "{{ openldap }}"
+
+certs_activate_debug_mode: False
+
+
+
+

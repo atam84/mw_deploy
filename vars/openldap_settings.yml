@@ -1,21 +1,62 @@
 ---
-openldap_server_user: ldap
 
-openldap_server_rootpw: R00tP@ssW0rd
+ldap_rootuser: admin
 
-openldap_rhel_path: /etc/openldap/
+ldap_rootpw: R00tP@ssW0rd
 
-openldap_deb_path: /etc/openldap/
+ldap:
+   rhel_os:
+      paths:
+         bin: /usr/sbin
+         config: /etc/openldap
+         working_dir: /var/lib/ldap
+         db: /var/lib/ldap
+         lib: /var/lib/ldap
+         share: /usr/share/openldap-servers
+         default_ldifs: /etc/openldap/schema
+         schemas: /etc/openldap/schema
+         certs: /etc/openldap/certs
+         private: /etc/openldap/private
+         ldif: /etc/openldap/ldif
+      sys_config_file: /etc/sysconfig/slapd
+      example_db: /usr/share/openldap-servers/DB_CONFIG.example
+      default_config_file: /etc/openldap/slapd.conf
+      pid_file: /var/run/slapd/slapd.pid
+      args_file: /var/run/slapd/slapd.args
+      user: ldap
+      group: ldap
+      slapd_service: SLAPD_URLS
+      service_name: slapd.service
+   deb_os:
+      paths:
+         bin: /usr/sbin
+         config: /etc/ldap
+         working_dir: /var/lib/slapd
+         db: /var/lib/ldap
+         lib: /usr/lib/ldap
+         share: /usr/share/slapd/
+         default_ldifs: /etc/ldap/schema
+         schemas: /etc/ldap/schema
+         certs: /etc/ldap/certs
+         private: /etc/ldap/private
+         ldif: /etc/ldap/ldif
+      sys_config_file: /etc/default/slapd
+      example_db: /usr/share/slapd/DB_CONFIG
+      default_config_file: /etc/ldap/ldap.conf
+      pid_file: /var/run/slapd/slapd.pid
+      args_file: /var/run/slapd/slapd.args
+      user: openldap
+      group: openldap
+      slapd_service: SLAPD_SERVICES
+      service_name: slapd.service
 
-openldap_password: md5hashPassword
-
-openldap_deb_packages:
+ldap_deb_packages:
   - slapd
   - ldap-utils
   - python-selinux
   - openssl
 
-openldap_rpm_packages:
+ldap_rpm_packages:
   - openldap
   - compat-openldap
   - openldap-clients
@@ -23,4 +64,5 @@ openldap_rpm_packages:
   - openldap-servers-sql
   - openldap-devel
   - libselinux-python
+  - migrationtools
   - openssl
